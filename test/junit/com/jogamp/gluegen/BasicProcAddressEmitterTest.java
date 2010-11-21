@@ -71,7 +71,6 @@ public class BasicProcAddressEmitterTest {
         compileNatives();
     }
 
-    @Ignore
     @Test
     public void renameTest() throws Exception {
 
