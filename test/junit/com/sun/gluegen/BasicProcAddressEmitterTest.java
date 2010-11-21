@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.util.HashSet;
 import java.util.Set;
 import org.junit.AfterClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import static java.util.Arrays.*;
 import static com.sun.gluegen.BuildUtil.*;
@@ -39,6 +40,7 @@ public class BasicProcAddressEmitterTest {
         compileNatives();
     }
 
+    @Ignore
     @Test
     public void renameTest() throws Exception {
 
