@@ -36,6 +36,7 @@ public class RunnableTask implements Runnable {
     Runnable runnable;
     Object notifyObject;
     boolean catchExceptions;
+    Object attachment;
 
     Throwable runnableException;
     long ts0, ts1, ts2;
@@ -57,27 +58,62 @@ public class RunnableTask implements Runnable {
         ts2 = 0;
     }
 
+    public Runnable getRunnable() {
+        return runnable;
+    }
+
+    /** 
+     * Attach a custom object to this task. 
+     * Useful to piggybag further information, ie tag a task final. 
+     */
+    public void setAttachment(Object o) {
+        attachment = o;
+    }
+
+    public Object getAttachment() {
+        return attachment;
+    }
+
     public void run() {
         ts1 = System.currentTimeMillis();
-        try {
-            runnable.run();
-        } catch (Throwable t) {
-            runnableException = t;
-            if(!catchExceptions) {
-                throw new RuntimeException(runnableException);
+        if(null == notifyObject) {
+            try {
+                runnable.run();
+            } catch (Throwable t) {
+                runnableException = t;
+                if(!catchExceptions) {
+                    throw new RuntimeException(runnableException);
+                }
+            } finally {
+                ts2 = System.currentTimeMillis();
             }
-        } finally {
-            ts2 = System.currentTimeMillis();
-        }
-        if(null != notifyObject) {
+        } else {
             synchronized (notifyObject) {
-                notifyObject.notifyAll();
+                try {
+                    runnable.run();
+                } catch (Throwable t) {
+                    runnableException = t;
+                    if(!catchExceptions) {
+                        throw new RuntimeException(runnableException);
+                    }
+                } finally {
+                    ts2 = System.currentTimeMillis();
+                    notifyObject.notifyAll();
+                }
             }
         }
     }
 
+    /**
+     * @return True if executed, otherwise false;
+     */
     public boolean isExecuted() { return 0 != ts2 ; }
+
+    /**
+     * @return A Throwable thrown while execution if any
+     */
     public Throwable getThrowable() { return runnableException; }
+
     public long getTimestampCreate() { return ts0; }
     public long getTimestampBeforeExec() { return ts1; }
     public long getTimestampAfterExec() { return ts2; }
@@ -86,7 +122,7 @@ public class RunnableTask implements Runnable {
     public long getDurationTotal() { return ts2 - ts0; }
 
     public String toString() {
-        return "RunnableTask[executed "+isExecuted()+", t2-t0 "+getDurationTotal()+", t2-t1 "+getDurationInExec()+", t1-t0 "+getDurationInQueue()+", throwable "+getThrowable()+", Runnable "+runnable+"]";
+        return "RunnableTask[executed "+isExecuted()+", t2-t0 "+getDurationTotal()+", t2-t1 "+getDurationInExec()+", t1-t0 "+getDurationInQueue()+", throwable "+getThrowable()+", Runnable "+runnable+", Attachment "+attachment+"]";
     }
 }
 

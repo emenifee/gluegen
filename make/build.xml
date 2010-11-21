@@ -19,9 +19,6 @@
       </condition>
   </fail>
 
-  <!-- This is the version of GlueGen you are building -->
-  <property name="gluegen_base_version" value="1.0-beta07"/>
-
   <import file="gluegen-cpptasks.xml" />
 
   <condition property="rootrel.build" value="build">
@@ -35,22 +32,38 @@
   </target>
 
   <target name="setup-excludes-2" unless="gluegen.nsig">
-    <property name="gluegen.excludes" value="com/jogamp/gluegen/runtime/BufferFactoryInternal.java,com/sun/gluegen/nativesig/**" />
+    <property name="gluegen.excludes" value="com/jogamp/gluegen/runtime/BufferFactoryInternal.java,com/jogamp/gluegen/nativesig/**" />
   </target>
 
-  <target name="init" depends="gluegen.properties.load.user,setup-excludes-1,setup-excludes-2">
+  <target name="init" depends="gluegen.properties.load.user,gluegen.cpptasks.detect.os,setup-excludes-1,setup-excludes-2">
     <!-- Declare all paths and user defined variables. -->
 
     <property name="javac.bootclasspath-cdc.jar" value="lib/cdc_fp.jar" />
 
+    <!--property name="javadoc.link" value="http://download.oracle.com/javase/1.4.2/docs/api/"/-->
+    <property name="javadoc.link" value="http://java.sun.com/j2se/1.4.2/docs/api/" />
+
     <!-- The source and build directories. -->
-    <property name="src.java" value="../src/java" />
-    <property name="build"    location="../${rootrel.build}" />
-    <property name="javadoc"  location="${build}/javadoc" />
+    <property name="project.root"  value=".." />
+    <property name="src.java" value="${project.root}/src/java" />
+    <property name="build"    location="${project.root}/${rootrel.build}" />
+    <property name="javadoc.root.path"    location="${build}/javadoc" />
+    <property name="javadoc.gluegen.path" location="${javadoc.root.path}/gluegen/javadoc" />
     <property name="gluegen.lib.dir" value="${build}/obj"/>
 
+    <tstamp>
+        <format property="version.timestamp" pattern="yyyyMMdd"/>
+    </tstamp>
+
     <property file="${build}/artifact.properties"/>
-    <property name="gluegen.build.number" value="manual-build"/>
+    <property name="gluegen.build.number" value="manual"/>
+    <property name="gluegen.build.id"     value="${version.timestamp}"/>
+    <property name="gluegen.build.branch" value="master"/>
+    <property name="gluegen.build.commit" value="manual"/>
+
+    <!-- This is the version of GlueGen you are building -->
+    <property name="gluegen_base_version" value="2.0"/>
+    <property name="gluegen.version" value="${gluegen_base_version}-b${gluegen.build.number}-${version.timestamp}" />
 
     <!-- The generated source directories. -->
     <property name="src.generated"          value="${build}/gensrc" />
@@ -77,15 +90,21 @@
     </path>
 
     <!-- The location of the GlueGen source and the C grammar files. -->
-    <property name="gluegen" value="${src.java}/com/sun/gluegen" />
+    <property name="gluegen" value="${src.java}/com/jogamp/gluegen" />
     <property name="c.grammar" value="${gluegen}/cgram" />
     <property name="j.grammar" value="${gluegen}/jgram" />
 
     <!-- The resulting location of the generated Java files from the
       - C grammar via ANTLR. -->
-    <property name="gluegen.build" value="${src.generated.java}/com/sun/gluegen" />
+    <property name="gluegen.build" value="${src.generated.java}/com/jogamp/gluegen" />
     <property name="generated.java.from.c.grammar" value="${gluegen.build}/cgram" />
     <property name="generated.java.from.j.grammar" value="${gluegen.build}/jgram" />
+
+    <property name="tools.jar" value="${java.home}/../lib/tools.jar"/>
+
+    <property name="archive.name"     value="gluegen-${gluegen.version}-${os.and.arch}" />
+    <property name="archive"          value="${build}/${archive.name}" />
+
   </target>
 
   <!--
@@ -142,26 +161,32 @@
       <pathelement location="${antlr.jar}" />
     </path>
     <!-- Define the GlueGen task we just built -->
-    <taskdef name="gluegen" classname="com.sun.gluegen.ant.GlueGenTask"
+    <taskdef name="gluegen" classname="com.jogamp.gluegen.ant.GlueGenTask"
              classpathref="gluegen.classpath" />
 
     <!-- Execute it against all of the OSs' header files -->
     <gluegen src="stub_includes/windows/dynamic-linker.h"
              config="dynlink-windows.cfg"
              includeRefId="stub.includes.fileset.windows"
-             emitter="com.sun.gluegen.JavaEmitter">
+             emitter="com.jogamp.gluegen.JavaEmitter"
+             dumpCPP="false"
+             debug="false">
       <classpath refid="gluegen.classpath" />
     </gluegen>
     <gluegen src="stub_includes/unix/dynamic-linker.h"
              config="dynlink-unix.cfg"
              includeRefId="stub.includes.fileset.unix"
-             emitter="com.sun.gluegen.JavaEmitter">
+             emitter="com.jogamp.gluegen.JavaEmitter"
+             dumpCPP="false"
+             debug="false">
       <classpath refid="gluegen.classpath" />
     </gluegen>
     <gluegen src="stub_includes/macosx/dynamic-linker.h"
              config="dynlink-macosx.cfg"
              includeRefId="stub.includes.fileset.macosx"
-             emitter="com.sun.gluegen.JavaEmitter">
+             emitter="com.jogamp.gluegen.JavaEmitter"
+             dumpCPP="false"
+             debug="false">
       <classpath refid="gluegen.classpath" />
     </gluegen>
   </target>
@@ -389,6 +414,7 @@
         <compiler extends="${compiler.cfg.id}" >
           <sysincludepath path="${java.includes.dir}"/>
           <sysincludepath path="${java.includes.dir.platform}"/>
+          <sysincludepath path="${stub.includes.dir}/platform"/>
         </compiler>
 
         <linker extends="${linker.cfg.id}" />
@@ -404,16 +430,16 @@
       <antcall target="c.manifest" inheritRefs="true" />
     </target>
 
-  <target name="gluegen.build.gluegen-rt-cdc" >
-    <!-- Build just the gluegen-rt-cdc.jar classes using the Java CDC
+  <target name="gluegen.build.gluegen-rt.cdc" >
+    <!-- Build just the gluegen-rt.cdc.jar classes using the Java CDC
          boot classes -->
     <copy todir="${classes-cdc}">
         <fileset dir="${classes}"
-                 includes="com/** net/**"
-                 excludes="com/jogamp/gluegen/runtime/** com/sun/gluegen/test/**" />
+                 includes="com/** net/**" 
+                 excludes="com/jogamp/gluegen/runtime/** com/jogamp/gluegen/test/**" />
     </copy>
 
-          <!-- bootclasspath="${javac.bootclasspath-cdc.jar}"-->
+    <!-- bootclasspath="${javac.bootclasspath-cdc.jar}"-->
     <javac destdir="${classes-cdc}"
            source="1.4"
            debug="true"
@@ -581,8 +607,19 @@
       <classpath refid="antlr.classpath" />
     </javac>
 
+    <copy file="Manifest"
+          tofile="${build}/Manifest.temp"
+          overwrite="true">
+        <filterset>
+            <filter token="VERSION" value="${gluegen.version}"/>
+            <filter token="SCM_BRANCH" value="${gluegen.build.branch}"/>
+            <filter token="SCM_COMMIT" value="${gluegen.build.commit}"/>
+            <filter token="BASEVERSION" value="${gluegen_base_version}"/>
+        </filterset>
+    </copy>
+
     <!-- Build gluegen.jar. -->
-    <jar destfile="${build}/gluegen.jar" manifest="Manifest">
+    <jar destfile="${build}/gluegen.jar" manifest="${build}/Manifest.temp">
       <fileset dir="${classes}">
         <include name="**/*.class" />
       </fileset>
@@ -592,14 +629,20 @@
           tofile="${build}/Manifest-rt.temp"
           overwrite="true">
         <filterset>
+            <filter token="VERSION" value="${gluegen.version}"/>
+            <filter token="SCM_BRANCH" value="${gluegen.build.branch}"/>
+            <filter token="SCM_COMMIT" value="${gluegen.build.commit}"/>
             <filter token="BASEVERSION" value="${gluegen_base_version}"/>
         </filterset>
     </copy>
 
-    <copy file="Manifest-rt-cdc"
-          tofile="${build}/Manifest-rt-cdc.temp"
+    <copy file="Manifest-rt.cdc"
+          tofile="${build}/Manifest-rt.cdc.temp"
           overwrite="true">
         <filterset>
+            <filter token="VERSION" value="${gluegen.version}"/>
+            <filter token="SCM_BRANCH" value="${gluegen.build.branch}"/>
+            <filter token="SCM_COMMIT" value="${gluegen.build.commit}"/>
             <filter token="BASEVERSION" value="${gluegen_base_version}"/>
         </filterset>
     </copy>
@@ -612,7 +655,6 @@
     <jar destfile="${build}/gluegen-rt.jar" manifest="${build}/Manifest-rt.temp">
       <fileset dir="${classes}">
         <include name="com/jogamp/gluegen/runtime/*.class" />
-        <include name="com/jogamp/gluegen/runtime/opengl/*.class" />
         <include name="com/jogamp/common/**" />
       </fileset>
     </jar>
@@ -622,24 +664,25 @@
       </fileset>
     </jar>
 
-    <!-- Build just the gluegen-rt-cdc.jar classes using the Java CDC
+    <!-- Build just the gluegen-rt.cdc.jar classes using the Java CDC
          boot classes. -->
-    <antcall target="gluegen.build.gluegen-rt-cdc" inheritRefs="true" />
+    <antcall target="gluegen.build.gluegen-rt.cdc" inheritRefs="true" />
 
-    <!-- Build gluegen-rt-cdc.jar. -->
-    <jar destfile="${build}/gluegen-rt-cdc.jar" manifest="${build}/Manifest-rt-cdc.temp">
+    <!-- Build gluegen-rt.cdc.jar. -->
+    <jar destfile="${build}/gluegen-rt.cdc.jar" manifest="${build}/Manifest-rt.cdc.temp">
       <fileset dir="${classes-cdc}">
         <include name="com/jogamp/gluegen/runtime/*.class" />
-        <include name="com/jogamp/gluegen/runtime/opengl/*.class" />
         <include name="com/jogamp/common/impl/*.class" />
         <include name="com/jogamp/common/jvm/*.class" />
+        <include name="com/jogamp/common/type/*.class" />
         <include name="com/jogamp/common/util/*.class" />
+        <include name="com/jogamp/common/util/locks/*.class" />
         <include name="com/jogamp/common/nio/*.class" />
         <include name="com/jogamp/common/os/*.class" />
         <include name="com/jogamp/common/*.class" />
       </fileset>
     </jar>
-    <jar destfile="${build}/gluegen-rt-natives-${os.and.arch}-cdc.jar" manifest="${build}/Manifest-rt-cdc.temp">
+    <jar destfile="${build}/gluegen-rt-natives-${os.and.arch}-cdc.jar" manifest="${build}/Manifest-rt.cdc.temp">
       <fileset dir="${build}/obj">
         <include name="*gluegen-rt.${native.library.suffix-cdc}" />
       </fileset>
@@ -655,7 +698,9 @@
     <copy file="${antlr.jar}" todir="${build}" />
   </target>
 
-  <target name="all" depends="init, gluegen.build, junit.compile, tag.build" />
+  <target name="base.compile" depends="init, gluegen.build" />
+
+  <target name="all" depends="base.compile, junit.compile, tag.build, developer-zip-archive" />
 
   <target name="clean" depends="init">
     <delete includeEmptyDirs="true">
@@ -663,65 +708,105 @@
     </delete>
   </target>
 
-  <target name="test" depends="init, gluegen.cpptasks.detect.os">
-      <mkdir dir="${build}/test/build/classes"/>
-      <mkdir dir="${build}/test/results"/>
-
-      <property name="tools.jar" value="${java.home}/../lib/tools.jar"/>
-
-      <javac destdir="${build}/test/build/classes" srcdir="${gluegen.root}/test/junit" source="1.5" failonerror="false"
-            debug="true" debuglevel="lines,vars,source" includeAntRuntime="false">
-          <classpath path="${junit.jar}:${build}/classes:${build}/test/gensrc/java:${tools.jar}:${ant.core.lib}"/>
-      </javac>
-
-      <junit forkmode="once" showoutput="true" fork="true" includeAntRuntime="true">
-          <env key="${system.env.library.path}" path="${gluegen.lib.dir}${path.separator}${build}/test/build/natives"/>
-          <jvmarg value="-Djava.library.path=${gluegen.lib.dir}${path.separator}${build}/test/build/natives"/>
-          <jvmarg value="-Drootrel.build=${rootrel.build}"/>
-          <jvmarg value="-Dos.arch=${os.arch}"/>
-          <jvmarg value="-Dgluegen.user.compiler.file=${gluegen.user.compiler.file}"/>
-          <batchtest todir="${build}/test/results">
-              <fileset dir="${build}/test/build/classes">
-                  <include name="com/sun/gluegen/**Test*"/>
-                  <include name="com/jogamp/common/nio/**Test*"/>
-                  <include name="com/jogamp/common/util/**Test*"/>
-              </fileset>
-              <formatter usefile="false" type="plain"/>
-              <formatter usefile="true" type="xml"/>
-          </batchtest>
-          <classpath>
-              <path path="${build}/test/build/classes:${build}/test/gensrc/java:${build}/classes:${antlr.jar}:${junit.jar}:${tools.jar}:${ant.core.lib}"/>
-          </classpath>
-      </junit>
-  </target>
-
   <target name="tag.build" depends="init">
     <echo message='gluegen.build.number=${gluegen.build.number}${line.separator}' file="${build}/artifact.properties"/>
+    <echo message='gluegen.build.id=${gluegen.build.id}${line.separator}'         file="${build}/artifact.properties" append="true"/>
+    <echo message='gluegen.build.branch=${gluegen.build.branch}${line.separator}' file="${build}/artifact.properties" append="true"/>
+    <echo message='gluegen.build.commit=${gluegen.build.commit}${line.separator}' file="${build}/artifact.properties" append="true"/>
   </target>
 
-  <target name="junit.compile">
+  <target name="junit.compile" depends="init, gluegen.cpptasks.detect.os">
+    <mkdir dir="${build}/test/build/classes"/>
+
+    <javac destdir="${build}/test/build/classes" srcdir="${gluegen.root}/test/junit" source="1.5" failonerror="false"
+        debug="true" debuglevel="lines,vars,source" includeAntRuntime="false"
+        excludes="com/jogamp/gluegen/StructValidator.java">
+      <classpath path="${junit.jar}:${build}/classes:${build}/test/gensrc/java:${tools.jar}:${ant.core.lib}"/>
+    </javac>
+
     <ant antfile="build-junit.xml" target="junit.compile"/>
   </target>
 
-  <target name="junit.run">
+  <target name="junit.run" depends="junit.compile">
+    <mkdir dir="${build}/test/results"/>
+    <delete quiet="true">
+        <fileset dir="${build}/test/results" includes="**"/>
+    </delete>
+
+    <junit forkmode="once" showoutput="true" fork="true" includeAntRuntime="true">
+      <env key="${system.env.library.path}" path="${gluegen.lib.dir}${path.separator}${build}/test/build/natives"/>
+      <jvmarg value="-Djava.library.path=${gluegen.lib.dir}${path.separator}${build}/test/build/natives"/>
+      <jvmarg value="-Drootrel.build=${rootrel.build}"/>
+      <jvmarg value="-Dos.arch=${os.arch}"/>
+      <jvmarg value="-Dgluegen.user.compiler.file=${gluegen.user.compiler.file}"/>
+      <batchtest todir="${build}/test/results">
+          <fileset dir="${build}/test/build/classes">
+              <include name="com/jogamp/gluegen/**Test*"/>
+              <include name="com/jogamp/common/nio/**Test*"/>
+              <include name="com/jogamp/common/util/**Test*"/>
+              <include name="com/jogamp/common/util/locks/**Test*"/>
+              <exclude name="**/*$$*"/>
+          </fileset>
+          <formatter usefile="false" type="plain"/>
+          <formatter usefile="true" type="xml"/>
+      </batchtest>
+      <classpath>
+          <path path="${build}/test/build/classes:${build}/test/gensrc/java:${build}/classes:${antlr.jar}:${junit.jar}:${tools.jar}:${ant.core.lib}"/>
+      </classpath>
+    </junit>
+
     <ant antfile="build-junit.xml" target="junit.run"/>
   </target>
 
   <target name="javadoc" depends="init">
-    <!-- Build the general public Javadoc -->
+    <!-- Build the general public Javadoc in the target folder hierarchy javadoc/gluegen/javadoc -->
+    <delete dir="${javadoc.gluegen.path}" includeEmptyDirs="true" quiet="true" failonerror="false" />
+    <mkdir dir="${javadoc.gluegen.path}" />
     <javadoc packagenames="com.jogamp.*"
              sourcepath="${src.java};${src.generated.java}"
-             destdir="${javadoc}" windowtitle="GlueGen Runtime Documentation"
-             source="1.4"
+             destdir="${javadoc.gluegen.path}" windowtitle="GlueGen Runtime Documentation"
+             overview="../src/java/com/jogamp/gluegen/package.html"
+             source="1.5"
              maxmemory="256m" >
         <classpath path="${classes}"/>
         <link offline="true" href="${javadoc.link}" packagelistLoc="142-packages" />
         <excludepackage name="com.jogamp.common.impl"/>
     </javadoc>
     <zip destfile="${build}/javadoc.zip"
-         basedir="${build}"
-         includes="javadoc/**" />
+         basedir="${javadoc.root.path}"
+         includes="gluegen/**" />
   </target>
+
+    <!-- ================================================================== -->
+    <!--
+       - Build the per-platform binary zip archive for developers.
+       - This must be called after all of the build targets complete.
+      -->
+
+    <target name="developer-zip-archive" depends="init" unless="build.noarchives">
+        <delete includeEmptyDirs="true" quiet="true" dir="${archive}" failonerror="false" />
+        <mkdir dir="${archive}" />
+        <copy file="${build}/artifact.properties" todir="${archive}"/>
+        <copy file="../LICENSE.txt"    todir="${archive}" />
+        <mkdir dir="${archive}/jar" />
+        <copy todir="${archive}/jar">
+            <fileset dir="${build}" includes="gluegen*.jar"/>
+        </copy>
+        <mkdir dir="${archive}/lib" />
+        <copy todir="${archive}/lib">
+            <fileset dir="${build}/obj" includes="*${native.library.suffix}"/>
+        </copy>
+        <mkdir dir="${archive}/jnlp-files" />
+        <copy todir="${archive}/jnlp-files">
+            <fileset dir="${project.root}/jnlp-files" includes="*" />
+        </copy>
+        <delete quiet="true" file="${build}/${archive.name}.zip"/>
+        <zip destfile="${build}/${archive.name}.zip"
+             basedir="${build}"
+             includes="${archive.name}/**" />
+        <!-- Clean up after ourselves -->
+        <delete includeEmptyDirs="true" quiet="true" dir="${archive}" failonerror="false" />
+    </target>
 
 
         <!-- Put  the files created by target gluegen.build from
@@ -729,6 +814,82 @@
          (targets maven.install and maven.deploy.snapshot respectively)-->
     
     <import file="maven-common.xml" />
+
+    <target name="maven.prepare.pom">
+        <copy file="pom-template.xml" tofile="${build}/pom-${artifactId}.xml" overwrite="true">
+            <filterset>
+                <filter token="ARTIFACTID" value="${artifactId}"/>
+                <filter token="VERSION" value="${maven.artifacts.version}"/>
+                <filter token="DESCRIPTION" value="${description}"/>
+                <filter token="DEPENDENCIES" value=""/>
+            </filterset>
+        </copy>
+    </target>
+
+    <target name="maven.prepare.native.pom">
+        <loadfile srcfile="pom-rt-dependency.xml" property="maven.dependencies.section"/>
+        <copy file="pom-template.xml" tofile="${build}/pom-${artifactId}-${os.and.arch}.xml" overwrite="true">
+            <filterchain description="Put in the dependencies section, then replace tokens">
+                <replacetokens>
+                    <token key="DEPENDENCIES" value="${maven.dependencies.section}"/>
+                </replacetokens>
+                <replacetokens>
+                    <token key="ARTIFACTID" value="${artifactId}"/>
+                    <token key="VERSION" value="${maven.artifacts.version}"/>
+                    <token key="DESCRIPTION" value="${description}"/>
+                </replacetokens>
+            </filterchain>
+        </copy>
+    </target>
+
+    <target name="maven.install.artifact">
+        <antcall target="maven.prepare.pom" inheritall="true"/>
+        <exec executable="mvn" dir="${build}">
+            <arg value="install:install-file"/>
+            <arg value="-Dfile=${artifactId}.jar"/>
+            <arg value="-DpomFile=pom-${artifactId}.xml"/>
+            <arg value="-DcreateChecksum=true"/>
+        </exec>
+    </target>
+
+
+    <target name="maven.install.native.artifact">
+        <antcall target="maven.prepare.native.pom" inheritall="true"/>
+        <exec executable="mvn" dir="${build}">
+            <arg value="install:install-file"/>
+            <arg value="-Dfile=${artifactId}-${os.and.arch}.jar"/>
+            <arg value="-DpomFile=pom-${artifactId}-${os.and.arch}.xml"/>
+            <arg value="-DcreateChecksum=true"/>
+            <arg value="-Dclassifier=${os.and.arch}"/>
+        </exec>
+    </target>
+
+    <target name="maven.deploy.artifact">
+        <antcall target="maven.prepare.pom" inheritall="true"/>
+        <exec executable="mvn" dir="${build}">
+            <arg value="deploy:deploy-file"/>
+            <arg value="-DrepositoryId=sonatype-nexus-snapshots"/>
+            <arg value="-Durl=https://oss.sonatype.org/content/repositories/snapshots/"/>
+
+            <arg value="-Dfile=${artifactId}.jar"/>
+            <arg value="-DpomFile=pom-${artifactId}.xml"/>
+            <arg value="-DcreateChecksum=true"/>
+        </exec>
+    </target>
+
+    <target name="maven.deploy.native.artifact">
+        <antcall target="maven.prepare.native.pom" inheritall="true"/>
+        <exec executable="mvn" dir="${build}">
+            <arg value="deploy:deploy-file"/>
+            <arg value="-DrepositoryId=sonatype-nexus-snapshots"/>
+            <arg value="-Durl=https://oss.sonatype.org/content/repositories/snapshots/"/>
+
+            <arg value="-Dfile=${artifactId}-${os.and.arch}.jar"/>
+            <arg value="-DpomFile=pom-${artifactId}-${os.and.arch}.xml"/>
+            <arg value="-DcreateChecksum=true"/>
+            <arg value="-Dclassifier=${os.and.arch}"/>
+        </exec>
+    </target>
 
     <target name="maven.antcalls">
         <antcall target="maven.${mvn.task}.artifact" inheritall="true">
@@ -751,10 +912,6 @@
         <!--<param name="artifactId" value="gluegen-rt-natives-cdc"/>-->
         <!--<param name="description" value="Gluegen CDC runtime native libraries for ${os.and.arch}"/>-->
         <!--</antcall>-->
-        <antcall target="maven.${mvn.task}.artifact" inheritall="true">
-            <param name="artifactId" value="gluegen-cpptasks"/>
-            <param name="description" value="GlueGen cpp tasks definitions"/>
-        </antcall>
     </target>
 
     <target name="maven.install" depends="init, gluegen.build">

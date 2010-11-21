@@ -22,9 +22,9 @@
         <property name="make" value="." />
 
         <property name="test.base.dir"  value="${gluegen.root}/src/junit" />
-        <property name="test.junit.rel" value="com/jogamp" />
+        <property name="test.junit.rel" value="com/jogamp/gluegen/test/junit" />
         <property name="test.junit.dir" value="${test.base.dir}/${test.junit.rel}" />
-        <property name="test.junit.generation.rel" value="${test.junit.rel}/gluegen/test/junit/generation" />
+        <property name="test.junit.generation.rel" value="${test.junit.rel}/generation" />
         <property name="test.junit.generation.dir" value="${test.base.dir}/${test.junit.generation.rel}" />
 
         <property name="test.dir"     value="${gluegen.root}/${rootrel.build}/test"/>
@@ -34,6 +34,8 @@
         <property name="build_t.java" value="${build_t}/classes"/>
         <property name="build_t.obj"  value="${build_t}/obj"/>
         <property name="build_t.lib"  value="${build_t}/natives"/>
+
+        <property name="batchtest.timeout"    value="1800000"/> <!-- 30 min -->
 
         <property name="build_t.gen.rootrel" value="${rootrel.build}/test/build/gensrc"/>
 
@@ -84,10 +86,8 @@
         <echo message="build_t.obj: ${build_t.obj} "/>
         <echo message="build_t.lib: ${build_t.lib} "/>
 
-        <!-- Add the GlueGen and BuildStaticGLInfo tasks to ANT -->
-        <taskdef name="gluegen" classname="com.sun.gluegen.ant.GlueGenTask"
-                 classpathref="gluegen.classpath" />
-        <taskdef name="staticglgen" classname="com.sun.gluegen.ant.StaticGLGenTask"
+        <!-- Add the GlueGen tasks to ANT -->
+        <taskdef name="gluegen" classname="com.jogamp.gluegen.ant.GlueGenTask"
                  classpathref="gluegen.classpath" />
     </target>
 
@@ -157,7 +157,7 @@
           <compiler extends="@{compiler.cfg.id}" >
             <sysincludepath path="${java.includes.dir}"/>
             <sysincludepath path="${java.includes.dir.platform}"/>
-            <includepath path="${stub.includes.dir}/common"/>
+            <sysincludepath path="${stub.includes.dir}/platform"/>
             <includepath path="${test.junit.generation.dir}"/>
             <includepath path="${build_t.gen}/native"/>
           </compiler>
@@ -186,17 +186,12 @@
     </target>
 
     <target name="junit.run" depends="init,gluegen.cpptasks.detect.os">
-        <mkdir dir="${results}"/>
-        <delete quiet="true">
-            <fileset dir="${results}" includes="**"/>
-        </delete>
-
         <!-- Use absolute path -->
         <property name="gluegen.lib.abs" location="${gluegen.lib}" />
         <property name="build_t.lib.abs" location="${build_t.lib}" />
 
         <!-- Perform the junit tests-->
-        <junit forkmode="once" showoutput="true" fork="true">
+        <junit forkmode="once" showoutput="true" fork="true" timeout="${batchtest.timeout}">
             <env key="${system.env.library.path}" path="${gluegen.lib.abs}${path.separator}${build_t.lib.abs}"/>
             <jvmarg value="-Djava.library.path=${gluegen.lib.abs}${path.separator}${build_t.lib.abs}"/>
             <jvmarg value="-Drootrel.build=${rootrel.build}"/>
@@ -214,6 +209,7 @@
             <batchtest todir="${results}">
               <fileset dir="${build_t.java}">
                   <include name="${test.junit.rel}/**/*Test*"/>
+                  <exclude name="**/*$$*"/>
               </fileset>
               <formatter usefile="false" type="brief"/>
               <formatter usefile="true" type="xml"/>
@@ -248,7 +244,10 @@
 
         <dirset id="stub.includes.fileset.test" dir=".">
             <include name="${test.junit.generation.dir}/**"/>
-            <include name="${stub.includes.dir}/**" />
+            <include name="${stub.includes.dir}/gluegen" />
+            <include name="${stub.includes.dir}/macosx" />
+            <include name="${stub.includes.dir}/unix" />
+            <include name="${stub.includes.dir}/windows" />
         </dirset>
 
         <gluegen src="${test.junit.generation.dir}/test1-gluegen.c"
@@ -256,7 +255,9 @@
                  config="${test.junit.generation.dir}/test1-gluegen.cfg"
                  literalInclude="${test.junit.generation.dir}"
                  includeRefid="stub.includes.fileset.test"
-                 emitter="com.sun.gluegen.JavaEmitter">
+                 emitter="com.jogamp.gluegen.JavaEmitter"
+                 dumpCPP="false"
+                 debug="false">
             <classpath refid="gluegen.classpath" />
         </gluegen>
 
@@ -265,7 +266,9 @@
                  config="${test.junit.generation.dir}/test1p1-gluegen.cfg"
                  literalInclude="${test.junit.generation.dir}"
                  includeRefid="stub.includes.fileset.test"
-                 emitter="com.sun.gluegen.JavaEmitter">
+                 emitter="com.jogamp.gluegen.JavaEmitter"
+                 dumpCPP="false"
+                 debug="false">
             <classpath refid="gluegen.classpath" />
         </gluegen>
 
@@ -274,7 +277,9 @@
                  config="${test.junit.generation.dir}/test1p2-gluegen.cfg"
                  literalInclude="${test.junit.generation.dir}"
                  includeRefid="stub.includes.fileset.test"
-                 emitter="com.sun.gluegen.procaddress.ProcAddressEmitter">
+                 emitter="com.jogamp.gluegen.procaddress.ProcAddressEmitter"
+                 dumpCPP="false"
+                 debug="false">
             <classpath refid="gluegen.classpath" />
         </gluegen>
     </target>

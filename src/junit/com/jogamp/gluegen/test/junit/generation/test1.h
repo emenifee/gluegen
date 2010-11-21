@@ -23,7 +23,8 @@
 #define CONSTANT_ONE 1
 #define ARRAY_SIZE 8
 
-#include "gluegenint.h"
+#include <gluegen_stdint.h>
+#include <gluegen_stddef.h>
 
 typedef uint64_t foo;
 
@@ -91,4 +92,30 @@ MYAPI MYAPIConfig  MYAPIENTRY typeTestAnonSingle(const MYAPIConfig a);
 
 /** Return a copy of the passed MYAPIConfig*, incremented by 1 */
 MYAPI MYAPIConfig *  MYAPIENTRY typeTestAnonPointer(const MYAPIConfig * a);
+
+#define DOUBLE_DEFINE_BRACKETS_1 ( ( int ) 1e51 )
+#define DOUBLE_DEFINE_BRACKETS_2 ((int) 1e52)
+
+#define HUGE_VALF_3        ((int) 1e53)
+#define DOUBLE_DEFINE_BRACKETS_3 HUGE_VALF_3
+
+size_t unsigned_size_t_1;
+ptrdiff_t a_signed_pointer_t_1;
+
+MYAPI int32_t   MYAPIENTRY typeTestInt32T(const int32_t i1, int32_t i2);
+MYAPI uint32_t  MYAPIENTRY typeTestUInt32T(const uint32_t ui1, uint32_t ui2);
+MYAPI int64_t   MYAPIENTRY typeTestInt64T(const int64_t i1, int64_t i2);
+MYAPI uint64_t  MYAPIENTRY typeTestUInt64T(const uint64_t ui1, uint64_t ui2);
+
+MYAPI wchar_t   MYAPIENTRY typeTestWCharT(const wchar_t c1, wchar_t c2);
+MYAPI size_t    MYAPIENTRY typeTestSizeT(const size_t size1, size_t size2);
+MYAPI ptrdiff_t MYAPIENTRY typeTestPtrDiffT(const ptrdiff_t ptr1, ptrdiff_t ptr2);
+MYAPI intptr_t  MYAPIENTRY typeTestIntPtrT(const intptr_t ptr1, intptr_t ptr2);
+MYAPI uintptr_t MYAPIENTRY typeTestUIntPtrT(const uintptr_t ptr1, uintptr_t ptr2);
+
+#ifdef __GLUEGEN__
+    #warning "Hello GlueGen"
+#else
+    #warning "Hello Native Compiler"
+#endif
 

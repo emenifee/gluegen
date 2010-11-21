@@ -226,6 +226,7 @@ public class IntIntHashMapTest {
         // to decrease chance of Garbage Collector needing to run durring test
         // trigger the Garbage Collector prior to timing test.
         gc();
+
         time = nanoTime();
         for (int i = 0; i < iterations; i++) {
             map.put(rndKeys[i], rndValues[i]);
@@ -235,9 +236,11 @@ public class IntIntHashMapTest {
 
         System.out.println();
         System.out.println("get");
+
         // to decrease chance of Garbage Collector needing to run durring test
         // trigger the Garbage Collector prior to timing test.
         gc();
+
         time = nanoTime();
         for (int i = 0; i < iterations; i++) {
             intmap.get(rndValues[i]);
@@ -248,6 +251,7 @@ public class IntIntHashMapTest {
         // to decrease chance of Garbage Collector needing to run durring test
         // trigger the Garbage Collector prior to timing test.
         gc();
+
         time = nanoTime();
         for (int i = 0; i < iterations; i++) {
             map.get(rndValues[i]);
@@ -258,9 +262,11 @@ public class IntIntHashMapTest {
 
         out.println();
         out.println("remove");
+
         // to decrease chance of Garbage Collector needing to run durring test
         // trigger the Garbage Collector prior to timing test.
         gc();
+
         time = nanoTime();
         for (int i = 0; i < iterations; i++) {
             intmap.remove(rndValues[i]);
@@ -271,6 +277,7 @@ public class IntIntHashMapTest {
         // to decrease chance of Garbage Collector needing to run durring test
         // trigger the Garbage Collector prior to timing test.
         gc();
+
         time = nanoTime();
         for (int i = 0; i < iterations; i++) {
             map.remove(rndValues[i]);

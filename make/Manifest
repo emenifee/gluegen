@@ -1,2 +1,12 @@
-Main-Class: com.sun.gluegen.GlueGen
+Manifest-Version: 1.0
+Specification-Title: GlueGen Java Bindings Generator
+Specification-Version: @BASEVERSION@
+Specification-Vendor: JogAmp Community
+Implementation-Title: GlueGen Compile-Time
+Implementation-Version: @VERSION@
+Implementation-Branch: @SCM_BRANCH@
+Implementation-Commit: @SCM_COMMIT@
+Implementation-Vendor: JogAmp Community
+Implementation-Vendor-Id: com.jogamp
+Main-Class: com.jogamp.gluegen.GlueGen
 Class-Path: antlr.jar
