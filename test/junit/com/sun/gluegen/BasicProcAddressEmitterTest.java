@@ -47,6 +47,7 @@ public class BasicProcAddressEmitterTest {
 
     @Test
     public void generateBindingTest() {
+        System.out.println(this.getClass().toString() + ": generateBindingTest()");
         generate("dyntest", "test", ProcAddressEmitter.class.getName());
     }
 
@@ -56,6 +57,7 @@ public class BasicProcAddressEmitterTest {
      */
     @Test
     public void compileJavaTest() {
+        System.out.println(this.getClass().toString() + ": compileJavaTest()");
         compileJava();
     }
 
@@ -65,6 +67,7 @@ public class BasicProcAddressEmitterTest {
      */
     @Test
     public void compileNativesTest() {
+        System.out.println(this.getClass().toString() + ": compileNativesTest()");
         compileNatives();
     }
 
@@ -72,6 +75,7 @@ public class BasicProcAddressEmitterTest {
     @Test
     public void renameTest() throws Exception {
 
+        System.out.println(this.getClass().toString() + ": renameTest()");
         Class<?> binding = Class.forName("test.DynBindingTest");
         Class<?> table = Class.forName("test.Table");
         
