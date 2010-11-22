@@ -1,3 +1,7 @@
 build
 make/GnuCTreeParserTokenTypes.txt
 make/STDCTokenTypes.txt
+oldantstuff/build
+oldantstuff/make/GnuCTreeParserTokenTypes.txt
+oldantstuff/make/STDCTokenTypes.txt
+
